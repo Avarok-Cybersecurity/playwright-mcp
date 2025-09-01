@@ -27,7 +27,7 @@ const console = defineTabTool({
     type: 'readOnly',
   },
   handle: async (tab, params, response) => {
-    tab.consoleMessages().map(message => response.addResult(message.toString()));
+    tab.getFilteredConsoleMessages().map(message => response.addResult(message.toString()));
   },
 });
 

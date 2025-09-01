@@ -116,4 +116,14 @@ export type Config = {
    * Whether to send image responses to the client. Can be "allow", "omit", or "auto". Defaults to "auto", which sends images if the client can display them.
    */
   imageResponses?: 'allow' | 'omit';
+
+  /**
+   * Maximum number of characters to include in console output. 0 means unlimited (default).
+   */
+  consoleMaxWindow?: number;
+
+  /**
+   * Regular expression to filter console messages. Only messages matching this regex will be included.
+   */
+  consoleRegex?: string;
 };

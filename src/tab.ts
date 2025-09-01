@@ -188,6 +188,10 @@ export class Tab extends EventEmitter<TabEventsInterface> {
     return this._consoleMessages;
   }
 
+  getFilteredConsoleMessages(): ConsoleMessage[] {
+    return this._filterMessages(this._consoleMessages);
+  }
+
   requests(): Map<playwright.Request, playwright.Response | null> {
     return this._requests;
   }
@@ -207,7 +211,8 @@ export class Tab extends EventEmitter<TabEventsInterface> {
     });
     if (tabSnapshot) {
       // Assign console message late so that we did not lose any to modal state.
-      tabSnapshot.consoleMessages = this._recentConsoleMessages;
+      // Apply filtering to recent console messages
+      tabSnapshot.consoleMessages = this._filterMessages(this._recentConsoleMessages);
       this._recentConsoleMessages = [];
     }
     return tabSnapshot ?? {
@@ -218,6 +223,54 @@ export class Tab extends EventEmitter<TabEventsInterface> {
       consoleMessages: [],
       downloads: [],
     };
+  }
+
+  private _filterMessages(messages: ConsoleMessage[]): ConsoleMessage[] {
+    let filtered = messages;
+
+    // Apply regex filtering if specified
+    if (this.context.config.consoleRegex) {
+      try {
+        const regex = new RegExp(this.context.config.consoleRegex);
+        filtered = filtered.filter(msg => regex.test(msg.toString()));
+      } catch (e) {
+        // If regex is invalid, fall back to all messages
+        // eslint-disable-next-line no-console
+        console.error('Invalid console regex pattern:', this.context.config.consoleRegex);
+      }
+    }
+
+    // Apply character limit if specified (0 means unlimited)
+    if (this.context.config.consoleMaxWindow > 0) {
+      // Calculate total characters and trim from the beginning if needed
+      let totalChars = 0;
+      const reversedMessages = [...filtered].reverse();
+      const keptMessages: ConsoleMessage[] = [];
+
+      for (const msg of reversedMessages) {
+        const msgString = msg.toString();
+        if (totalChars + msgString.length <= this.context.config.consoleMaxWindow) {
+          keptMessages.unshift(msg);
+          totalChars += msgString.length;
+        } else if (totalChars < this.context.config.consoleMaxWindow) {
+          // Partially include this message to reach the limit
+          const remainingChars = this.context.config.consoleMaxWindow - totalChars;
+          const truncatedText = '...' + msgString.slice(msgString.length - remainingChars + 3);
+          const truncatedMessage: ConsoleMessage = {
+            type: msg.type,
+            text: truncatedText,
+            toString: () => truncatedText
+          };
+          keptMessages.unshift(truncatedMessage);
+          break;
+        } else {
+          break;
+        }
+      }
+      filtered = keptMessages;
+    }
+
+    return filtered;
   }
 
   private _javaScriptBlocked(): boolean {

@@ -31,6 +31,8 @@ export type CLIOptions = {
   caps?: string[];
   cdpEndpoint?: string;
   config?: string;
+  consoleMaxWindow?: number;
+  consoleRegex?: string;
   device?: string;
   executablePath?: string;
   headless?: boolean;
@@ -69,6 +71,8 @@ const defaultConfig: FullConfig = {
   },
   server: {},
   saveTrace: false,
+  consoleMaxWindow: 0,  // 0 means unlimited
+  consoleRegex: undefined,
 };
 
 type BrowserUserConfig = NonNullable<Config['browser']>;
@@ -82,6 +86,8 @@ export type FullConfig = Config & {
   network: NonNullable<Config['network']>,
   saveTrace: boolean;
   server: NonNullable<Config['server']>,
+  consoleMaxWindow: number;
+  consoleRegex?: string;
 };
 
 export async function resolveConfig(config: Config): Promise<FullConfig> {
@@ -191,6 +197,8 @@ export function configFromCLIOptions(cliOptions: CLIOptions): Config {
     saveSession: cliOptions.saveSession,
     saveTrace: cliOptions.saveTrace,
     outputDir: cliOptions.outputDir,
+    consoleMaxWindow: cliOptions.consoleMaxWindow,
+    consoleRegex: cliOptions.consoleRegex,
     imageResponses: cliOptions.imageResponses,
   };
 
@@ -206,6 +214,8 @@ function configFromEnv(): Config {
   options.caps = commaSeparatedList(process.env.PLAYWRIGHT_MCP_CAPS);
   options.cdpEndpoint = envToString(process.env.PLAYWRIGHT_MCP_CDP_ENDPOINT);
   options.config = envToString(process.env.PLAYWRIGHT_MCP_CONFIG);
+  options.consoleMaxWindow = envToNumber(process.env.PLAYWRIGHT_MCP_MAX_CONSOLE_CONTEXT_WINDOW);
+  options.consoleRegex = envToString(process.env.PLAYWRIGHT_MCP_CONSOLE_REGEX);
   options.device = envToString(process.env.PLAYWRIGHT_MCP_DEVICE);
   options.executablePath = envToString(process.env.PLAYWRIGHT_MCP_EXECUTABLE_PATH);
   options.headless = envToBoolean(process.env.PLAYWRIGHT_MCP_HEADLESS);
