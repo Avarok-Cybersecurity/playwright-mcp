@@ -15,17 +15,18 @@
  */
 
 import { program, Option } from 'commander';
-// @ts-ignore
-import { startTraceViewerServer } from 'playwright-core/lib/server';
+import * as mcpServer from './mcp/server';
+import { commaSeparatedList, resolveCLIConfig, semicolonSeparatedList } from './config';
+import { packageJSON } from './utils/package';
+import { Context } from './context';
+import { contextFactory } from './browserContextFactory';
+import { runLoopTools } from './loopTools/main';
+import { ProxyBackend } from './mcp/proxyBackend';
+import { BrowserServerBackend } from './browserServerBackend';
+import { ExtensionContextFactory } from './extension/extensionContextFactory';
 
-import * as mcpTransport from './mcp/transport.js';
-import { commaSeparatedList, resolveCLIConfig, semicolonSeparatedList } from './config.js';
-import { packageJSON } from './package.js';
-import { createExtensionContextFactory, runWithExtension } from './extension/main.js';
-import { BrowserServerBackend, FactoryList } from './browserServerBackend.js';
-import { Context } from './context.js';
-import { contextFactory } from './browserContextFactory.js';
-import { runLoopTools } from './loopTools/main.js';
+import { runVSCodeTools } from './vscode/host';
+import type { MCPProvider } from './mcp/proxyBackend';
 
 program
     .version('Version ' + packageJSON.version)
@@ -39,6 +40,7 @@ program
     .option('--config <path>', 'path to the configuration file.')
     .option('--device <device>', 'device to emulate, for example: "iPhone 15"')
     .option('--executable-path <path>', 'path to the browser executable.')
+    .option('--extension', 'Connect to a running browser instance (Edge/Chrome only). Requires the "Playwright MCP Bridge" browser extension to be installed.')
     .option('--headless', 'run browser in headless mode, headed by default')
     .option('--host <host>', 'host to bind server to. Default is localhost. Use 0.0.0.0 to bind to all interfaces.')
     .option('--ignore-https-errors', 'ignore https errors')
@@ -55,8 +57,8 @@ program
     .option('--user-agent <ua string>', 'specify user agent string')
     .option('--user-data-dir <path>', 'path to the user data directory. If not specified, a temporary directory will be created.')
     .option('--viewport-size <size>', 'specify browser viewport size in pixels, for example "1280, 720"')
-    .addOption(new Option('--extension', 'Connect to a running browser instance (Edge/Chrome only). Requires the "Playwright MCP Bridge" browser extension to be installed.').hideHelp())
     .addOption(new Option('--connect-tool', 'Allow to switch between different browser connection methods.').hideHelp())
+    .addOption(new Option('--vscode', 'VS Code tools.').hideHelp())
     .addOption(new Option('--loop-tools', 'Run loop tools').hideHelp())
     .addOption(new Option('--vision', 'Legacy option, use --caps=vision instead').hideHelp())
     .action(async options => {
@@ -67,31 +69,62 @@ program
         console.error('The --vision option is deprecated, use --caps=vision instead');
         options.caps = 'vision';
       }
+
       const config = await resolveCLIConfig(options);
+      const browserContextFactory = contextFactory(config);
+      const extensionContextFactory = new ExtensionContextFactory(config.browser.launchOptions.channel || 'chrome', config.browser.userDataDir, config.browser.launchOptions.executablePath);
 
       if (options.extension) {
-        await runWithExtension(config);
+        const serverBackendFactory: mcpServer.ServerBackendFactory = {
+          name: 'Playwright w/ extension',
+          nameInConfig: 'playwright-extension',
+          version: packageJSON.version,
+          create: () => new BrowserServerBackend(config, extensionContextFactory)
+        };
+        await mcpServer.start(serverBackendFactory, config.server);
         return;
       }
+
+      if (options.vscode) {
+        await runVSCodeTools(config);
+        return;
+      }
+
       if (options.loopTools) {
         await runLoopTools(config);
         return;
       }
 
-      const browserContextFactory = contextFactory(config);
-      const factories: FactoryList = [browserContextFactory];
-      if (options.connectTool)
-        factories.push(createExtensionContextFactory(config));
-      const serverBackendFactory = () => new BrowserServerBackend(config, factories);
-      await mcpTransport.start(serverBackendFactory, config.server);
-
-      if (config.saveTrace) {
-        const server = await startTraceViewerServer();
-        const urlPrefix = server.urlPrefix('human-readable');
-        const url = urlPrefix + '/trace/index.html?trace=' + config.browser.launchOptions.tracesDir + '/trace.json';
-        // eslint-disable-next-line no-console
-        console.error('\nTrace viewer listening on ' + url);
+      if (options.connectTool) {
+        const providers: MCPProvider[] = [
+          {
+            name: 'default',
+            description: 'Starts standalone browser',
+            connect: () => mcpServer.wrapInProcess(new BrowserServerBackend(config, browserContextFactory)),
+          },
+          {
+            name: 'extension',
+            description: 'Connect to a browser using the Playwright MCP extension',
+            connect: () => mcpServer.wrapInProcess(new BrowserServerBackend(config, extensionContextFactory)),
+          },
+        ];
+        const factory: mcpServer.ServerBackendFactory = {
+          name: 'Playwright w/ switch',
+          nameInConfig: 'playwright-switch',
+          version: packageJSON.version,
+          create: () => new ProxyBackend(providers),
+        };
+        await mcpServer.start(factory, config.server);
+        return;
       }
+
+      const factory: mcpServer.ServerBackendFactory = {
+        name: 'Playwright',
+        nameInConfig: 'playwright',
+        version: packageJSON.version,
+        create: () => new BrowserServerBackend(config, browserContextFactory)
+      };
+      await mcpServer.start(factory, config.server);
     });
 
 function setupExitWatchdog() {

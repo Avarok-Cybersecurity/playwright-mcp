@@ -16,7 +16,7 @@
 
 import fs from 'fs';
 
-import { test, expect } from './fixtures.js';
+import { test, expect } from './fixtures';
 
 test('browser_take_screenshot (viewport)', async ({ startClient, server }, testInfo) => {
   const { client } = await startClient({
@@ -264,12 +264,7 @@ test('browser_take_screenshot (fullPage: true)', async ({ startClient, server },
       {
         text: expect.stringContaining('fullPage: true'),
         type: 'text',
-      },
-      {
-        data: expect.any(String),
-        mimeType: 'image/png',
-        type: 'image',
-      },
+      }
     ],
   });
 });
@@ -305,7 +300,10 @@ test('browser_take_screenshot (viewport without snapshot)', async ({ startClient
 
   // Ensure we have a tab but don't navigate anywhere (no snapshot captured)
   expect(await client.callTool({
-    name: 'browser_tab_list',
+    name: 'browser_tabs',
+    arguments: {
+      action: 'list',
+    },
   })).toHaveResponse({
     tabs: `- 0: (current) [] (about:blank)`,
   });

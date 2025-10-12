@@ -26,14 +26,19 @@ import { spawn } from 'child_process';
 import http from 'http';
 import debug from 'debug';
 import { WebSocket, WebSocketServer } from 'ws';
-import { httpAddressToString } from '../httpServer.js';
-import { logUnhandledError } from '../log.js';
-import { ManualPromise } from '../manualPromise.js';
-import type websocket from 'ws';
-import type { ClientInfo } from '../browserContextFactory.js';
 
 // @ts-ignore
-const { registry } = await import('playwright-core/lib/server/registry/index');
+import { registry } from 'playwright-core/lib/server/registry/index';
+
+import { httpAddressToString } from '../mcp/http.js';
+import { logUnhandledError } from '../utils/log.js';
+import { ManualPromise } from '../mcp/manualPromise.js';
+import * as protocol from './protocol';
+
+import type websocket from 'ws';
+import type { ClientInfo } from '../browserContextFactory.js';
+import type { ExtensionCommand, ExtensionEvents } from './protocol';
+
 
 const debugLogger = debug('pw:mcp:relay');
 
@@ -56,6 +61,8 @@ type CDPResponse = {
 export class CDPRelayServer {
   private _wsHost: string;
   private _browserChannel: string;
+  private _userDataDir?: string;
+  private _executablePath?: string;
   private _cdpPath: string;
   private _extensionPath: string;
   private _wss: WebSocketServer;
@@ -69,9 +76,11 @@ export class CDPRelayServer {
   private _nextSessionId: number = 1;
   private _extensionConnectionPromise!: ManualPromise<void>;
 
-  constructor(server: http.Server, browserChannel: string) {
+  constructor(server: http.Server, browserChannel: string, userDataDir?: string, executablePath?: string) {
     this._wsHost = httpAddressToString(server.address()).replace(/^http/, 'ws');
     this._browserChannel = browserChannel;
+    this._userDataDir = userDataDir;
+    this._executablePath = executablePath;
 
     const uuid = crypto.randomUUID();
     this._cdpPath = `/cdp/${uuid}`;
@@ -90,34 +99,53 @@ export class CDPRelayServer {
     return `${this._wsHost}${this._extensionPath}`;
   }
 
-  async ensureExtensionConnectionForMCPContext(clientInfo: ClientInfo, abortSignal: AbortSignal) {
+  async ensureExtensionConnectionForMCPContext(clientInfo: ClientInfo, abortSignal: AbortSignal, toolName: string | undefined) {
     debugLogger('Ensuring extension connection for MCP context');
     if (this._extensionConnection)
       return;
-    this._connectBrowser(clientInfo);
+    this._connectBrowser(clientInfo, toolName);
     debugLogger('Waiting for incoming extension connection');
     await Promise.race([
       this._extensionConnectionPromise,
+      new Promise((_, reject) => setTimeout(() => {
+        reject(new Error(`Extension connection timeout. Make sure the "Playwright MCP Bridge" extension is installed. See https://github.com/microsoft/playwright-mcp/blob/main/extension/README.md for installation instructions.`));
+      }, process.env.PWMCP_TEST_CONNECTION_TIMEOUT ? parseInt(process.env.PWMCP_TEST_CONNECTION_TIMEOUT, 10) : 5_000)),
       new Promise((_, reject) => abortSignal.addEventListener('abort', reject))
     ]);
     debugLogger('Extension connection established');
   }
 
-  private _connectBrowser(clientInfo: ClientInfo) {
+  private _connectBrowser(clientInfo: ClientInfo, toolName: string | undefined) {
     const mcpRelayEndpoint = `${this._wsHost}${this._extensionPath}`;
     // Need to specify "key" in the manifest.json to make the id stable when loading from file.
-    const url = new URL('chrome-extension://jakfalbnbhgkpmoaakfflhflbfpkailf/lib/ui/connect.html');
+    const url = new URL('chrome-extension://jakfalbnbhgkpmoaakfflhflbfpkailf/connect.html');
     url.searchParams.set('mcpRelayUrl', mcpRelayEndpoint);
-    url.searchParams.set('client', JSON.stringify(clientInfo));
+    const client = {
+      name: clientInfo.name,
+      version: clientInfo.version,
+    };
+    url.searchParams.set('client', JSON.stringify(client));
+    url.searchParams.set('protocolVersion', process.env.PWMCP_TEST_PROTOCOL_VERSION ?? protocol.VERSION.toString());
+    if (toolName)
+      url.searchParams.set('newTab', String(toolName === 'browser_navigate'));
     const href = url.toString();
-    const executableInfo = registry.findExecutable(this._browserChannel);
-    if (!executableInfo)
-      throw new Error(`Unsupported channel: "${this._browserChannel}"`);
-    const executablePath = executableInfo.executablePath();
-    if (!executablePath)
-      throw new Error(`"${this._browserChannel}" executable not found. Make sure it is installed at a standard location.`);
 
-    spawn(executablePath, [href], {
+    let executablePath = this._executablePath;
+    if (!executablePath) {
+      const executableInfo = registry.findExecutable(this._browserChannel);
+      if (!executableInfo)
+        throw new Error(`Unsupported channel: "${this._browserChannel}"`);
+      executablePath = executableInfo.executablePath();
+      if (!executablePath)
+        throw new Error(`"${this._browserChannel}" executable not found. Make sure it is installed at a standard location.`);
+    }
+
+    const args: string[] = [];
+    if (this._userDataDir)
+      args.push(`--user-data-dir=${this._userDataDir}`);
+    args.push(href);
+
+    spawn(executablePath, args, {
       windowsHide: true,
       detached: true,
       shell: false,
@@ -212,7 +240,7 @@ export class CDPRelayServer {
     this._extensionConnectionPromise.resolve();
   }
 
-  private _handleExtensionMessage(method: string, params: any) {
+  private _handleExtensionMessage<M extends keyof ExtensionEvents>(method: M, params: ExtensionEvents[M]['params']) {
     switch (method) {
       case 'forwardCDPEvent':
         const sessionId = params.sessionId || this._connectedTabInfo?.sessionId;
@@ -221,10 +249,6 @@ export class CDPRelayServer {
           method: params.method,
           params: params.params
         });
-        break;
-      case 'detachedFromTab':
-        debugLogger('← Debugger detached from tab:', params);
-        this._connectedTabInfo = undefined;
         break;
     }
   }
@@ -262,7 +286,7 @@ export class CDPRelayServer {
         if (sessionId)
           break;
         // Simulate auto-attach behavior with real target info
-        const { targetInfo } = await this._extensionConnection!.send('attachToTab');
+        const { targetInfo } = await this._extensionConnection!.send('attachToTab', { });
         this._connectedTabInfo = {
           targetInfo,
           sessionId: `pw-tab-${this._nextSessionId++}`,
@@ -316,7 +340,7 @@ class ExtensionConnection {
   private readonly _callbacks = new Map<number, { resolve: (o: any) => void, reject: (e: Error) => void, error: Error }>();
   private _lastId = 0;
 
-  onmessage?: (method: string, params: any) => void;
+  onmessage?: <M extends keyof ExtensionEvents>(method: M, params: ExtensionEvents[M]['params']) => void;
   onclose?: (self: ExtensionConnection, reason: string) => void;
 
   constructor(ws: WebSocket) {
@@ -326,11 +350,11 @@ class ExtensionConnection {
     this._ws.on('error', this._onError.bind(this));
   }
 
-  async send(method: string, params?: any, sessionId?: string): Promise<any> {
+  async send<M extends keyof ExtensionCommand>(method: M, params: ExtensionCommand[M]['params']): Promise<any> {
     if (this._ws.readyState !== WebSocket.OPEN)
       throw new Error(`Unexpected WebSocket state: ${this._ws.readyState}`);
     const id = ++this._lastId;
-    this._ws.send(JSON.stringify({ id, method, params, sessionId }));
+    this._ws.send(JSON.stringify({ id, method, params }));
     const error = new Error(`Protocol error: ${method}`);
     return new Promise((resolve, reject) => {
       this._callbacks.set(id, { resolve, reject, error });
@@ -375,7 +399,7 @@ class ExtensionConnection {
     } else if (object.id) {
       debugLogger('← Extension: unexpected response', object);
     } else {
-      this.onmessage?.(object.method!, object.params);
+      this.onmessage?.(object.method! as keyof ExtensionEvents, object.params);
     }
   }
 

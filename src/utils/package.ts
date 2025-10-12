@@ -14,27 +14,7 @@
  * limitations under the License.
  */
 
-import { resolve } from 'path';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import fs from 'fs';
+import path from 'path';
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  base: '/lib/ui/',
-  build: {
-    outDir: resolve(__dirname, 'lib/ui'),
-    emptyOutDir: true,
-    minify: false,
-    rollupOptions: {
-      input: resolve(__dirname, 'connect.html'),
-      output: {
-        manualChunks: undefined,
-        inlineDynamicImports: true,
-        entryFileNames: '[name].js',
-        chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]'
-      }
-    }
-  }
-});
+export const packageJSON = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));

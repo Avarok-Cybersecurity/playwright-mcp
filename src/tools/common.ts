@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { z } from 'zod';
-import { defineTabTool, defineTool } from './tool.js';
+import { z } from '../mcp/bundle.js';
+import { defineTabTool, defineTool } from './tool';
 
 const close = defineTool({
   capability: 'core',

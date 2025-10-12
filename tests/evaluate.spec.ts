@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { test, expect } from './fixtures.js';
+import { test, expect } from './fixtures';
 
 test('browser_evaluate', async ({ client, server }) => {
   expect(await client.callTool({
@@ -54,6 +54,25 @@ test('browser_evaluate (element)', async ({ client, server }) => {
   })).toHaveResponse({
     result: `"red"`,
     code: `await page.getByText('Hello, world!').evaluate('element => element.style.backgroundColor');`,
+  });
+});
+
+test('browser_evaluate object', async ({ client, server }) => {
+  expect(await client.callTool({
+    name: 'browser_navigate',
+    arguments: { url: server.HELLO_WORLD },
+  })).toHaveResponse({
+    pageState: expect.stringContaining(`- Page Title: Title`),
+  });
+
+  expect(await client.callTool({
+    name: 'browser_evaluate',
+    arguments: {
+      function: '() => ({ title: document.title, url: document.URL })',
+    },
+  })).toHaveResponse({
+    result: JSON.stringify({ title: 'Title', url: server.HELLO_WORLD }, null, 2),
+    code: `await page.evaluate('() => ({ title: document.title, url: document.URL })');`,
   });
 });
 

@@ -57,15 +57,30 @@ Follow the MCP install [guide](https://modelcontextprotocol.io/quickstart/user),
 </details>
 
 <details>
+<summary>Codex</summary>
+
+Create or edit the configuration file `~/.codex/config.toml` and add:
+
+```toml
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+```
+
+For more information, see the [Codex MCP documentation](https://github.com/openai/codex/blob/main/codex-rs/config.md#mcp_servers).
+
+</details>
+
+<details>
 <summary>Cursor</summary>
 
 #### Click the button to install:
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=playwright&config=eyJjb21tYW5kIjoibnB4IEBwbGF5d3JpZ2h0L21jcEBsYXRlc3QifQ%3D%3D)
+[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Install in Cursor">](cursor://anysphere.cursor-deeplink/mcp/install?name=Playwright&config=eyJjb21tYW5kIjoibnB4IEBwbGF5d3JpZ2h0L21jcEBsYXRlc3QifQ%3D%3D)
 
 #### Or install manually:
 
-Go to `Cursor Settings` -> `MCP` -> `Add new MCP Server`. Name to your liking, use `command` type with the command `npx @playwright/mcp`. You can also verify config or add command like arguments via clicking `Edit`.
+Go to `Cursor Settings` -> `MCP` -> `Add new MCP Server`. Name to your liking, use `command` type with the command `npx @playwright/mcp@latest`. You can also verify config or add command like arguments via clicking `Edit`.
 
 </details>
 
@@ -98,6 +113,29 @@ Go to `Advanced settings` -> `Extensions` -> `Add custom extension`. Name to you
 #### Or install manually:
 
 Go to `Program` in the right sidebar -> `Install` -> `Edit mcp.json`. Use the standard config above.
+</details>
+
+<details>
+<summary>opencode</summary>
+
+Follow the MCP Servers [documentation](https://opencode.ai/docs/mcp-servers/). For example in `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": true
+    }
+  }
+}
+
+```
 </details>
 
 <details>
@@ -158,6 +196,9 @@ Playwright MCP server supports following arguments. They can be provided in the 
   --config <path>              path to the configuration file.
   --device <device>            device to emulate, for example: "iPhone 15"
   --executable-path <path>     path to the browser executable.
+  --extension                  Connect to a running browser instance
+                               (Edge/Chrome only). Requires the "Playwright MCP
+                               Bridge" browser extension to be installed.
   --headless                   run browser in headless mode, headed by default
   --host <host>                host to bind server to. Default is localhost. Use
                                0.0.0.0 to bind to all interfaces.
@@ -191,7 +232,7 @@ Playwright MCP server supports following arguments. They can be provided in the 
 
 ### User profile
 
-You can run Playwright MCP with persistent profile like a regular browser (default), or in the isolated contexts for the testing sessions.
+You can run Playwright MCP with persistent profile like a regular browser (default), in isolated contexts for testing sessions, or connect to your existing browser using the browser extension.
 
 **Persistent profile**
 
@@ -230,6 +271,10 @@ state [here](https://playwright.dev/docs/auth).
   }
 }
 ```
+
+**Browser Extension**
+
+The Playwright MCP Chrome Extension allows you to connect to existing browser tabs and leverage your logged-in sessions and browser state. See [extension/README.md](extension/README.md) for installation and setup instructions.
 
 ### Configuration file
 
@@ -449,6 +494,15 @@ http.createServer(async (req, res) => {
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
+- **browser_fill_form**
+  - Title: Fill form
+  - Description: Fill multiple form fields
+  - Parameters:
+    - `fields` (array): Fields to fill in
+  - Read-only: **false**
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
 - **browser_handle_dialog**
   - Title: Handle a dialog
   - Description: Handle a dialog
@@ -481,14 +535,6 @@ http.createServer(async (req, res) => {
 - **browser_navigate_back**
   - Title: Go back
   - Description: Go back to the previous page
-  - Parameters: None
-  - Read-only: **true**
-
-<!-- NOTE: This has been generated via update-readme.js -->
-
-- **browser_navigate_forward**
-  - Title: Go forward
-  - Description: Go forward to the next page
   - Parameters: None
   - Read-only: **true**
 
@@ -582,38 +628,13 @@ http.createServer(async (req, res) => {
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
-- **browser_tab_close**
-  - Title: Close a tab
-  - Description: Close a tab
+- **browser_tabs**
+  - Title: Manage tabs
+  - Description: List, create, close, or select a browser tab.
   - Parameters:
-    - `index` (number, optional): The index of the tab to close. Closes current tab if not provided.
+    - `action` (string): Operation to perform
+    - `index` (number, optional): Tab index, used for close/select. If omitted for close, current tab is closed.
   - Read-only: **false**
-
-<!-- NOTE: This has been generated via update-readme.js -->
-
-- **browser_tab_list**
-  - Title: List tabs
-  - Description: List browser tabs
-  - Parameters: None
-  - Read-only: **true**
-
-<!-- NOTE: This has been generated via update-readme.js -->
-
-- **browser_tab_new**
-  - Title: Open a new tab
-  - Description: Open a new tab
-  - Parameters:
-    - `url` (string, optional): The URL to navigate to in the new tab. If not provided, the new tab will be blank.
-  - Read-only: **true**
-
-<!-- NOTE: This has been generated via update-readme.js -->
-
-- **browser_tab_select**
-  - Title: Select a tab
-  - Description: Select a tab by index
-  - Parameters:
-    - `index` (number): The index of the tab to select
-  - Read-only: **true**
 
 </details>
 
@@ -680,6 +701,53 @@ http.createServer(async (req, res) => {
   - Description: Save page as PDF
   - Parameters:
     - `filename` (string, optional): File name to save the pdf to. Defaults to `page-{timestamp}.pdf` if not specified.
+  - Read-only: **true**
+
+</details>
+
+<details>
+<summary><b>Verify (opt-in via --caps=verify)</b></summary>
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_verify_element_visible**
+  - Title: Verify element visible
+  - Description: Verify element is visible on the page
+  - Parameters:
+    - `role` (string): ROLE of the element. Can be found in the snapshot like this: `- {ROLE} "Accessible Name":`
+    - `accessibleName` (string): ACCESSIBLE_NAME of the element. Can be found in the snapshot like this: `- role "{ACCESSIBLE_NAME}"`
+  - Read-only: **true**
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_verify_list_visible**
+  - Title: Verify list visible
+  - Description: Verify list is visible on the page
+  - Parameters:
+    - `element` (string): Human-readable list description
+    - `ref` (string): Exact target element reference that points to the list
+    - `items` (array): Items to verify
+  - Read-only: **true**
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_verify_text_visible**
+  - Title: Verify text visible
+  - Description: Verify text is visible on the page. Prefer browser_verify_element_visible if possible.
+  - Parameters:
+    - `text` (string): TEXT to verify. Can be found in the snapshot like this: `- role "Accessible Name": {TEXT}` or like this: `- text: {TEXT}`
+  - Read-only: **true**
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_verify_value**
+  - Title: Verify value
+  - Description: Verify element value
+  - Parameters:
+    - `type` (string): Type of the element
+    - `element` (string): Human-readable element description
+    - `ref` (string): Exact target element reference that points to the element
+    - `value` (string): Value to verify. For checkbox, use "true" or "false".
   - Read-only: **true**
 
 </details>

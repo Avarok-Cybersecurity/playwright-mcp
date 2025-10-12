@@ -17,15 +17,15 @@
 import debug from 'debug';
 import * as playwright from 'playwright';
 
-import { logUnhandledError } from './log.js';
-import { Tab } from './tab.js';
-import { outputFile  } from './config.js';
+import { logUnhandledError } from './utils/log';
+import { Tab } from './tab';
+import { outputFile  } from './config';
 
-import type { FullConfig } from './config.js';
-import type { Tool } from './tools/tool.js';
-import type { BrowserContextFactory, ClientInfo } from './browserContextFactory.js';
-import type * as actions from './actions.js';
-import type { SessionLog } from './sessionLog.js';
+import type { FullConfig } from './config';
+import type { Tool } from './tools/tool';
+import type { BrowserContextFactory, ClientInfo } from './browserContextFactory';
+import type * as actions from './actions';
+import type { SessionLog } from './sessionLog';
 
 const testDebug = debug('pw:mcp:test');
 
@@ -50,7 +50,7 @@ export class Context {
 
   private static _allContexts: Set<Context> = new Set();
   private _closeBrowserContextPromise: Promise<void> | undefined;
-  private _isRunningTool: boolean = false;
+  private _runningToolName: string | undefined;
   private _abortController = new AbortController();
 
   constructor(options: ContextOptions) {
@@ -145,11 +145,11 @@ export class Context {
   }
 
   isRunningTool() {
-    return this._isRunningTool;
+    return this._runningToolName !== undefined;
   }
 
-  setRunningTool(isRunningTool: boolean) {
-    this._isRunningTool = isRunningTool;
+  setRunningTool(name: string | undefined) {
+    this._runningToolName = name;
   }
 
   private async _closeBrowserContextImpl() {
@@ -202,7 +202,7 @@ export class Context {
     if (this._closeBrowserContextPromise)
       throw new Error('Another browser context is being closed.');
     // TODO: move to the browser context factory to make it based on isolation mode.
-    const result = await this._browserContextFactory.createContext(this._clientInfo, this._abortController.signal);
+    const result = await this._browserContextFactory.createContext(this._clientInfo, this._abortController.signal, this._runningToolName);
     const { browserContext } = result;
     await this._setupRequestInterception(browserContext);
     if (this.sessionLog)

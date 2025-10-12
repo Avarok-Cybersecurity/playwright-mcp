@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { z } from 'zod';
-import { defineTool, defineTabTool } from './tool.js';
+import { z } from '../mcp/bundle.js';
+import { defineTool, defineTabTool } from './tool';
 
 const navigate = defineTool({
   capability: 'core',
@@ -56,24 +56,7 @@ const goBack = defineTabTool({
   },
 });
 
-const goForward = defineTabTool({
-  capability: 'core',
-  schema: {
-    name: 'browser_navigate_forward',
-    title: 'Go forward',
-    description: 'Go forward to the next page',
-    inputSchema: z.object({}),
-    type: 'readOnly',
-  },
-  handle: async (tab, params, response) => {
-    await tab.page.goForward();
-    response.setIncludeSnapshot();
-    response.addCode(`await page.goForward();`);
-  },
-});
-
 export default [
   navigate,
   goBack,
-  goForward,
 ];
