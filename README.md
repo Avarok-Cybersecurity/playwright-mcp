@@ -38,6 +38,31 @@ First, install the Playwright MCP server with your client.
 
 [<img src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Server&color=0098FF" alt="Install in VS Code">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522playwright%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522%2540playwright%252Fmcp%2540latest%2522%255D%257D) [<img alt="Install in VS Code Insiders" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20Server&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522playwright%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522%2540playwright%252Fmcp%2540latest%2522%255D%257D)
 
+<details>
+<summary>Amp</summary>
+
+Add via the Amp VS Code extension settings screen or by updating your settings.json file:
+
+```json
+"amp.mcpServers": {
+  "playwright": {
+    "command": "npx",
+    "args": [
+      "@playwright/mcp@latest"
+    ]
+  }
+}
+```
+
+**Amp CLI Setup:**
+
+Add via the `amp mcp add`command below
+
+```bash
+amp mcp add playwright -- npx @playwright/mcp@latest
+```
+
+</details>
 
 <details>
 <summary>Claude Code</summary>
@@ -76,7 +101,7 @@ For more information, see the [Codex MCP documentation](https://github.com/opena
 
 #### Click the button to install:
 
-[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Install in Cursor">](cursor://anysphere.cursor-deeplink/mcp/install?name=Playwright&config=eyJjb21tYW5kIjoibnB4IEBwbGF5d3JpZ2h0L21jcEBsYXRlc3QifQ%3D%3D)
+[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Install in Cursor">](https://cursor.com/en/install-mcp?name=Playwright&config=eyJjb21tYW5kIjoibnB4IEBwbGF5d3JpZ2h0L21jcEBsYXRlc3QifQ%3D%3D)
 
 #### Or install manually:
 
@@ -101,6 +126,25 @@ Follow the MCP install [guide](https://github.com/google-gemini/gemini-cli/blob/
 #### Or install manually:
 
 Go to `Advanced settings` -> `Extensions` -> `Add custom extension`. Name to your liking, use type `STDIO`, and set the `command` to `npx @playwright/mcp`. Click "Add Extension".
+</details>
+
+<details>
+<summary>Kiro</summary>
+
+Follow the MCP Servers [documentation](https://kiro.dev/docs/mcp/). For example in `.kiro/settings/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    }
+  }
+}
+```
 </details>
 
 <details>
@@ -166,6 +210,27 @@ After installation, the Playwright MCP server will be available for use with you
 </details>
 
 <details>
+<summary>Warp</summary>
+
+Go to `Settings` -> `AI` -> `Manage MCP Servers` -> `+ Add` to [add an MCP Server](https://docs.warp.dev/knowledge-and-collaboration/mcp#adding-an-mcp-server). Use the standard config above.
+
+Alternatively, use the slash command `/add-mcp` in the Warp prompt and paste the standard config from above:
+```js
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
 <summary>Windsurf</summary>
 
 Follow Windsurf MCP [documentation](https://docs.windsurf.com/windsurf/cascade/mcp). Use the standard config above.
@@ -180,52 +245,92 @@ Playwright MCP server supports following arguments. They can be provided in the 
 
 ```
 > npx @playwright/mcp@latest --help
-  --allowed-origins <origins>  semicolon-separated list of origins to allow the
-                               browser to request. Default is to allow all.
-  --blocked-origins <origins>  semicolon-separated list of origins to block the
-                               browser from requesting. Blocklist is evaluated
-                               before allowlist. If used without the allowlist,
-                               requests not matching the blocklist are still
-                               allowed.
-  --block-service-workers      block service workers
-  --browser <browser>          browser or chrome channel to use, possible
-                               values: chrome, firefox, webkit, msedge.
-  --caps <caps>                comma-separated list of additional capabilities
-                               to enable, possible values: vision, pdf.
-  --cdp-endpoint <endpoint>    CDP endpoint to connect to.
-  --config <path>              path to the configuration file.
-  --device <device>            device to emulate, for example: "iPhone 15"
-  --executable-path <path>     path to the browser executable.
-  --extension                  Connect to a running browser instance
-                               (Edge/Chrome only). Requires the "Playwright MCP
-                               Bridge" browser extension to be installed.
-  --headless                   run browser in headless mode, headed by default
-  --host <host>                host to bind server to. Default is localhost. Use
-                               0.0.0.0 to bind to all interfaces.
-  --ignore-https-errors        ignore https errors
-  --isolated                   keep the browser profile in memory, do not save
-                               it to disk.
-  --image-responses <mode>     whether to send image responses to the client.
-                               Can be "allow" or "omit", Defaults to "allow".
-  --no-sandbox                 disable the sandbox for all process types that
-                               are normally sandboxed.
-  --output-dir <path>          path to the directory for output files.
-  --port <port>                port to listen on for SSE transport.
-  --proxy-bypass <bypass>      comma-separated domains to bypass proxy, for
-                               example ".com,chromium.org,.domain.com"
-  --proxy-server <proxy>       specify proxy server, for example
-                               "http://myproxy:3128" or "socks5://myproxy:8080"
-  --save-session               Whether to save the Playwright MCP session into
-                               the output directory.
-  --save-trace                 Whether to save the Playwright Trace of the
-                               session into the output directory.
-  --storage-state <path>       path to the storage state file for isolated
-                               sessions.
-  --user-agent <ua string>     specify user agent string
-  --user-data-dir <path>       path to the user data directory. If not
-                               specified, a temporary directory will be created.
-  --viewport-size <size>       specify browser viewport size in pixels, for
-                               example "1280, 720"
+  --allowed-hosts <hosts...>            comma-separated list of hosts this
+                                        server is allowed to serve from.
+                                        Defaults to the host the server is bound
+                                        to. Pass '*' to disable the host check.
+  --allowed-origins <origins>           semicolon-separated list of origins to
+                                        allow the browser to request. Default is
+                                        to allow all.
+  --blocked-origins <origins>           semicolon-separated list of origins to
+                                        block the browser from requesting.
+                                        Blocklist is evaluated before allowlist.
+                                        If used without the allowlist, requests
+                                        not matching the blocklist are still
+                                        allowed.
+  --block-service-workers               block service workers
+  --browser <browser>                   browser or chrome channel to use,
+                                        possible values: chrome, firefox,
+                                        webkit, msedge.
+  --caps <caps>                         comma-separated list of additional
+                                        capabilities to enable, possible values:
+                                        vision, pdf.
+  --cdp-endpoint <endpoint>             CDP endpoint to connect to.
+  --cdp-header <headers...>             CDP headers to send with the connect
+                                        request, multiple can be specified.
+  --config <path>                       path to the configuration file.
+  --device <device>                     device to emulate, for example: "iPhone
+                                        15"
+  --executable-path <path>              path to the browser executable.
+  --extension                           Connect to a running browser instance
+                                        (Edge/Chrome only). Requires the
+                                        "Playwright MCP Bridge" browser
+                                        extension to be installed.
+  --grant-permissions <permissions...>  List of permissions to grant to the
+                                        browser context, for example
+                                        "geolocation", "clipboard-read",
+                                        "clipboard-write".
+  --headless                            run browser in headless mode, headed by
+                                        default
+  --host <host>                         host to bind server to. Default is
+                                        localhost. Use 0.0.0.0 to bind to all
+                                        interfaces.
+  --ignore-https-errors                 ignore https errors
+  --init-script <path...>               path to JavaScript file to add as an
+                                        initialization script. The script will
+                                        be evaluated in every page before any of
+                                        the page's scripts. Can be specified
+                                        multiple times.
+  --isolated                            keep the browser profile in memory, do
+                                        not save it to disk.
+  --image-responses <mode>              whether to send image responses to the
+                                        client. Can be "allow" or "omit",
+                                        Defaults to "allow".
+  --no-sandbox                          disable the sandbox for all process
+                                        types that are normally sandboxed.
+  --output-dir <path>                   path to the directory for output files.
+  --port <port>                         port to listen on for SSE transport.
+  --proxy-bypass <bypass>               comma-separated domains to bypass proxy,
+                                        for example
+                                        ".com,chromium.org,.domain.com"
+  --proxy-server <proxy>                specify proxy server, for example
+                                        "http://myproxy:3128" or
+                                        "socks5://myproxy:8080"
+  --save-session                        Whether to save the Playwright MCP
+                                        session into the output directory.
+  --save-trace                          Whether to save the Playwright Trace of
+                                        the session into the output directory.
+  --save-video <size>                   Whether to save the video of the session
+                                        into the output directory. For example
+                                        "--save-video=800x600"
+  --secrets <path>                      path to a file containing secrets in the
+                                        dotenv format
+  --shared-browser-context              reuse the same browser context between
+                                        all connected HTTP clients.
+  --storage-state <path>                path to the storage state file for
+                                        isolated sessions.
+  --test-id-attribute <attribute>       specify the attribute to use for test
+                                        ids, defaults to "data-testid"
+  --timeout-action <timeout>            specify action timeout in milliseconds,
+                                        defaults to 5000ms
+  --timeout-navigation <timeout>        specify navigation timeout in
+                                        milliseconds, defaults to 60000ms
+  --user-agent <ua string>              specify user agent string
+  --user-data-dir <path>                path to the user data directory. If not
+                                        specified, a temporary directory will be
+                                        created.
+  --viewport-size <size>                specify browser viewport size in pixels,
+                                        for example "1280x720"
 ```
 
 <!--- End of options generated section -->
@@ -396,6 +501,19 @@ And then in MCP client config, set the `url` to the HTTP endpoint:
 }
 ```
 
+Or If you prefer to run the container as a long-lived service instead of letting the MCP client spawn it, use:
+
+```
+docker run -d -i --rm --init --pull=always \
+  --entrypoint node \
+  --name playwright \
+  -p 8931:8931 \
+  mcr.microsoft.com/playwright/mcp \
+  cli.js --headless --browser chromium --no-sandbox --port 8931
+```
+
+The server will listen on host port **8931** and can be reached by any MCP client.  
+
 You can build the Docker image yourself.
 
 ```
@@ -418,7 +536,7 @@ http.createServer(async (req, res) => {
   // Creates a headless Playwright MCP server with SSE transport
   const connection = await createConnection({ browser: { launchOptions: { headless: true } } });
   const transport = new SSEServerTransport('/messages', res);
-  await connection.sever.connect(transport);
+  await connection.connect(transport);
 
   // ...
 });
@@ -442,6 +560,7 @@ http.createServer(async (req, res) => {
     - `ref` (string): Exact target element reference from the page snapshot
     - `doubleClick` (boolean, optional): Whether to perform a double click instead of a single click
     - `button` (string, optional): Button to click, defaults to left
+    - `modifiers` (array, optional): Modifier keys to press
   - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
@@ -450,14 +569,15 @@ http.createServer(async (req, res) => {
   - Title: Close browser
   - Description: Close the page
   - Parameters: None
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
 - **browser_console_messages**
   - Title: Get console messages
   - Description: Returns all console messages
-  - Parameters: None
+  - Parameters:
+    - `onlyErrors` (boolean, optional): Only return error messages
   - Read-only: **true**
 
 <!-- NOTE: This has been generated via update-readme.js -->
@@ -489,7 +609,7 @@ http.createServer(async (req, res) => {
   - Title: Upload files
   - Description: Upload one or multiple files
   - Parameters:
-    - `paths` (array): The absolute paths to the files to upload. Can be a single file or multiple files.
+    - `paths` (array, optional): The absolute paths to the files to upload. Can be single file or multiple files. If omitted, file chooser is cancelled.
   - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
@@ -519,7 +639,7 @@ http.createServer(async (req, res) => {
   - Parameters:
     - `element` (string): Human-readable element description used to obtain permission to interact with the element
     - `ref` (string): Exact target element reference from the page snapshot
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -536,7 +656,7 @@ http.createServer(async (req, res) => {
   - Title: Go back
   - Description: Go back to the previous page
   - Parameters: None
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -563,7 +683,7 @@ http.createServer(async (req, res) => {
   - Parameters:
     - `width` (number): Width of the browser window
     - `height` (number): Height of the browser window
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -591,7 +711,7 @@ http.createServer(async (req, res) => {
   - Description: Take a screenshot of the current page. You can't perform actions based on the screenshot, use browser_snapshot for actions.
   - Parameters:
     - `type` (string, optional): Image format for the screenshot. Default is png.
-    - `filename` (string, optional): File name to save the screenshot to. Defaults to `page-{timestamp}.{png|jpeg}` if not specified.
+    - `filename` (string, optional): File name to save the screenshot to. Defaults to `page-{timestamp}.{png|jpeg}` if not specified. Prefer relative file names to stay within the output directory.
     - `element` (string, optional): Human-readable element description used to obtain permission to screenshot the element. If not provided, the screenshot will be taken of viewport. If element is provided, ref must be provided too.
     - `ref` (string, optional): Exact target element reference from the page snapshot. If not provided, the screenshot will be taken of viewport. If ref is provided, element must be provided too.
     - `fullPage` (boolean, optional): When true, takes a screenshot of the full scrollable page, instead of the currently visible viewport. Cannot be used with element screenshots.
@@ -619,7 +739,7 @@ http.createServer(async (req, res) => {
     - `time` (number, optional): The time to wait in seconds
     - `text` (string, optional): The text to wait for
     - `textGone` (string, optional): The text to wait for to disappear
-  - Read-only: **true**
+  - Read-only: **false**
 
 </details>
 
@@ -687,7 +807,7 @@ http.createServer(async (req, res) => {
     - `element` (string): Human-readable element description used to obtain permission to interact with the element
     - `x` (number): X coordinate
     - `y` (number): Y coordinate
-  - Read-only: **true**
+  - Read-only: **false**
 
 </details>
 
@@ -700,13 +820,23 @@ http.createServer(async (req, res) => {
   - Title: Save as PDF
   - Description: Save page as PDF
   - Parameters:
-    - `filename` (string, optional): File name to save the pdf to. Defaults to `page-{timestamp}.pdf` if not specified.
+    - `filename` (string, optional): File name to save the pdf to. Defaults to `page-{timestamp}.pdf` if not specified. Prefer relative file names to stay within the output directory.
   - Read-only: **true**
 
 </details>
 
 <details>
-<summary><b>Verify (opt-in via --caps=verify)</b></summary>
+<summary><b>Test assertions (opt-in via --caps=testing)</b></summary>
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_generate_locator**
+  - Title: Create locator for element
+  - Description: Generate locator for the given element to use in tests
+  - Parameters:
+    - `element` (string): Human-readable element description used to obtain permission to interact with the element
+    - `ref` (string): Exact target element reference from the page snapshot
+  - Read-only: **true**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -716,7 +846,7 @@ http.createServer(async (req, res) => {
   - Parameters:
     - `role` (string): ROLE of the element. Can be found in the snapshot like this: `- {ROLE} "Accessible Name":`
     - `accessibleName` (string): ACCESSIBLE_NAME of the element. Can be found in the snapshot like this: `- role "{ACCESSIBLE_NAME}"`
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -727,7 +857,7 @@ http.createServer(async (req, res) => {
     - `element` (string): Human-readable list description
     - `ref` (string): Exact target element reference that points to the list
     - `items` (array): Items to verify
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -736,7 +866,7 @@ http.createServer(async (req, res) => {
   - Description: Verify text is visible on the page. Prefer browser_verify_element_visible if possible.
   - Parameters:
     - `text` (string): TEXT to verify. Can be found in the snapshot like this: `- role "Accessible Name": {TEXT}` or like this: `- text: {TEXT}`
-  - Read-only: **true**
+  - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
 
@@ -748,6 +878,27 @@ http.createServer(async (req, res) => {
     - `element` (string): Human-readable element description
     - `ref` (string): Exact target element reference that points to the element
     - `value` (string): Value to verify. For checkbox, use "true" or "false".
+  - Read-only: **false**
+
+</details>
+
+<details>
+<summary><b>Tracing (opt-in via --caps=tracing)</b></summary>
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_start_tracing**
+  - Title: Start tracing
+  - Description: Start trace recording
+  - Parameters: None
+  - Read-only: **true**
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_stop_tracing**
+  - Title: Stop tracing
+  - Description: Stop trace recording
+  - Parameters: None
   - Read-only: **true**
 
 </details>
