@@ -84,7 +84,13 @@ Follow the MCP install [guide](https://modelcontextprotocol.io/quickstart/user),
 <details>
 <summary>Codex</summary>
 
-Create or edit the configuration file `~/.codex/config.toml` and add:
+Use the Codex CLI to add the Playwright MCP server:
+
+```bash
+codex mcp add playwright npx "@playwright/mcp@latest"
+```
+
+Alternatively, create or edit the configuration file `~/.codex/config.toml` and add:
 
 ```toml
 [mcp_servers.playwright]
@@ -106,6 +112,21 @@ For more information, see the [Codex MCP documentation](https://github.com/opena
 #### Or install manually:
 
 Go to `Cursor Settings` -> `MCP` -> `Add new MCP Server`. Name to your liking, use `command` type with the command `npx @playwright/mcp@latest`. You can also verify config or add command like arguments via clicking `Edit`.
+
+</details>
+
+<details>
+<summary>Factory</summary>
+
+Use the Factory CLI to add the Playwright MCP server:
+
+```bash
+droid mcp add playwright "npx @playwright/mcp@latest"
+```
+
+Alternatively, type `/mcp` within Factory droid to open an interactive UI for managing MCP servers.
+
+For more information, see the [Factory MCP documentation](https://docs.factory.ai/cli/configuration/mcp).
 
 </details>
 
@@ -249,15 +270,21 @@ Playwright MCP server supports following arguments. They can be provided in the 
                                         server is allowed to serve from.
                                         Defaults to the host the server is bound
                                         to. Pass '*' to disable the host check.
-  --allowed-origins <origins>           semicolon-separated list of origins to
-                                        allow the browser to request. Default is
-                                        to allow all.
+  --allowed-origins <origins>           semicolon-separated list of TRUSTED
+                                        origins to allow the browser to request.
+                                        Default is to allow all.
+                                        Important: *does not* serve as a
+                                        security boundary and *does not* affect
+                                        redirects.
   --blocked-origins <origins>           semicolon-separated list of origins to
                                         block the browser from requesting.
                                         Blocklist is evaluated before allowlist.
                                         If used without the allowlist, requests
                                         not matching the blocklist are still
                                         allowed.
+                                        Important: *does not* serve as a
+                                        security boundary and *does not* affect
+                                        redirects.
   --block-service-workers               block service workers
   --browser <browser>                   browser or chrome channel to use,
                                         possible values: chrome, firefox,
@@ -286,6 +313,8 @@ Playwright MCP server supports following arguments. They can be provided in the 
                                         localhost. Use 0.0.0.0 to bind to all
                                         interfaces.
   --ignore-https-errors                 ignore https errors
+  --init-page <path...>                 path to TypeScript file to evaluate on
+                                        Playwright page object
   --init-script <path...>               path to JavaScript file to add as an
                                         initialization script. The script will
                                         be evaluated in every page before any of
@@ -381,6 +410,35 @@ state [here](https://playwright.dev/docs/auth).
 
 The Playwright MCP Chrome Extension allows you to connect to existing browser tabs and leverage your logged-in sessions and browser state. See [extension/README.md](extension/README.md) for installation and setup instructions.
 
+### Initial state
+
+There are multiple ways to provide the initial state to the browser context or a page.
+
+For the storage state, you can either:
+- Start with a user data directory using the `--user-data-dir` argument. This will persist all browser data between the sessions.
+- Start with a storage state file using the `--storage-state` argument. This will load cookies and local storage from the file into an isolated browser context.
+
+For the page state, you can use:
+
+- `--init-page` to point to a TypeScript file that will be evaluated on the Playwright page object. This allows you to run arbitrary code to set up the page.
+
+```ts
+// init-page.ts
+export default async ({ page }) => {
+  await page.context().grantPermissions(['geolocation']);
+  await page.context().setGeolocation({ latitude: 37.7749, longitude: -122.4194 });
+  await page.setViewportSize({ width: 1280, height: 720 });
+};
+```
+
+- `--init-script` to point to a JavaScript file that will be added as an initialization script. The script will be evaluated in every page before any of the page's scripts.
+This is useful for overriding browser APIs or setting up the environment.
+
+```js
+// init-script.js
+window.isPlaywrightMCP = true;
+```
+
 ### Configuration file
 
 The Playwright MCP server can be configured using a JSON configuration file. You can specify the configuration file
@@ -393,75 +451,171 @@ npx @playwright/mcp@latest --config path/to/config.json
 <details>
 <summary>Configuration file schema</summary>
 
+<!--- Config generated by update-readme.js -->
+
 ```typescript
 {
-  // Browser configuration
+  /**
+   * The browser to use.
+   */
   browser?: {
-    // Browser type to use (chromium, firefox, or webkit)
+    /**
+     * The type of browser to use.
+     */
     browserName?: 'chromium' | 'firefox' | 'webkit';
 
-    // Keep the browser profile in memory, do not save it to disk.
+    /**
+     * Keep the browser profile in memory, do not save it to disk.
+     */
     isolated?: boolean;
 
-    // Path to user data directory for browser profile persistence
+    /**
+     * Path to a user data directory for browser profile persistence.
+     * Temporary directory is created by default.
+     */
     userDataDir?: string;
 
-    // Browser launch options (see Playwright docs)
-    // @see https://playwright.dev/docs/api/class-browsertype#browser-type-launch
-    launchOptions?: {
-      channel?: string;        // Browser channel (e.g. 'chrome')
-      headless?: boolean;      // Run in headless mode
-      executablePath?: string; // Path to browser executable
-      // ... other Playwright launch options
-    };
+    /**
+     * Launch options passed to
+     * @see https://playwright.dev/docs/api/class-browsertype#browser-type-launch-persistent-context
+     *
+     * This is useful for settings options like `channel`, `headless`, `executablePath`, etc.
+     */
+    launchOptions?: playwright.LaunchOptions;
 
-    // Browser context options
-    // @see https://playwright.dev/docs/api/class-browser#browser-new-context
-    contextOptions?: {
-      viewport?: { width: number, height: number };
-      // ... other Playwright context options
-    };
+    /**
+     * Context options for the browser context.
+     *
+     * This is useful for settings options like `viewport`.
+     */
+    contextOptions?: playwright.BrowserContextOptions;
 
-    // CDP endpoint for connecting to existing browser
+    /**
+     * Chrome DevTools Protocol endpoint to connect to an existing browser instance in case of Chromium family browsers.
+     */
     cdpEndpoint?: string;
 
-    // Remote Playwright server endpoint
+    /**
+     * CDP headers to send with the connect request.
+     */
+    cdpHeaders?: Record<string, string>;
+
+    /**
+     * Remote endpoint to connect to an existing Playwright server.
+     */
     remoteEndpoint?: string;
+
+    /**
+     * Paths to TypeScript files to add as initialization scripts for Playwright page.
+     */
+    initPage?: string[];
+
+    /**
+     * Paths to JavaScript files to add as initialization scripts.
+     * The scripts will be evaluated in every page before any of the page's scripts.
+     */
+    initScript?: string[];
   },
 
-  // Server configuration
   server?: {
-    port?: number;  // Port to listen on
-    host?: string;  // Host to bind to (default: localhost)
+    /**
+     * The port to listen on for SSE or MCP transport.
+     */
+    port?: number;
+
+    /**
+     * The host to bind the server to. Default is localhost. Use 0.0.0.0 to bind to all interfaces.
+     */
+    host?: string;
+
+    /**
+     * The hosts this server is allowed to serve from. Defaults to the host server is bound to.
+     * This is not for CORS, but rather for the DNS rebinding protection.
+     */
+    allowedHosts?: string[];
   },
 
-  // List of additional capabilities
-  capabilities?: Array<
-    'tabs' |    // Tab management
-    'install' | // Browser installation
-    'pdf' |     // PDF generation
-    'vision' |  // Coordinate-based interactions
-  >;
+  /**
+   * List of enabled tool capabilities. Possible values:
+   *   - 'core': Core browser automation features.
+   *   - 'pdf': PDF generation and manipulation.
+   *   - 'vision': Coordinate-based interactions.
+   */
+  capabilities?: ToolCapability[];
 
-  // Directory for output files
+  /**
+   * Whether to save the Playwright session into the output directory.
+   */
+  saveSession?: boolean;
+
+  /**
+   * Whether to save the Playwright trace of the session into the output directory.
+   */
+  saveTrace?: boolean;
+
+  /**
+   * If specified, saves the Playwright video of the session into the output directory.
+   */
+  saveVideo?: {
+    width: number;
+    height: number;
+  };
+
+  /**
+   * Reuse the same browser context between all connected HTTP clients.
+   */
+  sharedBrowserContext?: boolean;
+
+  /**
+   * Secrets are used to prevent LLM from getting sensitive data while
+   * automating scenarios such as authentication.
+   * Prefer the browser.contextOptions.storageState over secrets file as a more secure alternative.
+   */
+  secrets?: Record<string, string>;
+
+  /**
+   * The directory to save output files.
+   */
   outputDir?: string;
 
-  // Network configuration
   network?: {
-    // List of origins to allow the browser to request. Default is to allow all. Origins matching both `allowedOrigins` and `blockedOrigins` will be blocked.
+    /**
+     * List of origins to allow the browser to request. Default is to allow all. Origins matching both `allowedOrigins` and `blockedOrigins` will be blocked.
+     */
     allowedOrigins?: string[];
 
-    // List of origins to block the browser to request. Origins matching both `allowedOrigins` and `blockedOrigins` will be blocked.
+    /**
+     * List of origins to block the browser to request. Origins matching both `allowedOrigins` and `blockedOrigins` will be blocked.
+     */
     blockedOrigins?: string[];
   };
- 
+
   /**
-   * Whether to send image responses to the client. Can be "allow" or "omit". 
-   * Defaults to "allow".
+   * Specify the attribute to use for test ids, defaults to "data-testid".
+   */
+  testIdAttribute?: string;
+
+  timeouts?: {
+    /*
+     * Configures default action timeout: https://playwright.dev/docs/api/class-page#page-set-default-timeout. Defaults to 5000ms.
+     */
+    action?: number;
+
+    /*
+     * Configures default navigation timeout: https://playwright.dev/docs/api/class-page#page-set-default-navigation-timeout. Defaults to 60000ms.
+     */
+    navigation?: number;
+  };
+
+  /**
+   * Whether to send image responses to the client. Can be "allow", "omit", or "auto". Defaults to "auto", which sends images if the client can display them.
    */
   imageResponses?: 'allow' | 'omit';
 }
 ```
+
+<!--- End of config generated section -->
+
 </details>
 
 ### Standalone MCP server
@@ -683,6 +837,15 @@ http.createServer(async (req, res) => {
   - Parameters:
     - `width` (number): Width of the browser window
     - `height` (number): Height of the browser window
+  - Read-only: **false**
+
+<!-- NOTE: This has been generated via update-readme.js -->
+
+- **browser_run_code**
+  - Title: Run Playwright code
+  - Description: Run Playwright code snippet
+  - Parameters:
+    - `code` (string): Playwright code snippet to run. The snippet should access the `page` object to interact with the page. Can make multiple statements. For example: `await page.getByRole('button', { name: 'Submit' }).click();`
   - Read-only: **false**
 
 <!-- NOTE: This has been generated via update-readme.js -->
