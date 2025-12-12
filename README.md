@@ -659,6 +659,16 @@ npx @playwright/mcp@latest --config path/to/config.json
    */
   imageResponses?: 'allow' | 'omit';
 
+  /**
+   * Maximum number of characters to include in console output. 0 means unlimited (default).
+   */
+  consoleMaxWindow?: number;
+
+  /**
+   * Regular expression to filter console messages. Only messages matching this regex will be included.
+   */
+  consoleRegex?: string;
+
   snapshot?: {
     /**
      * When taking snapshots for responses, specifies the mode to use.
